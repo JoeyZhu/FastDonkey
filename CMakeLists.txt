@@ -21,7 +21,7 @@ endif()
 include_directories(/home/pi/samplecodes/ncnn/build/install/include/)
 link_directories(/home/pi/samplecodes/ncnn/build/install/lib/)
 
-add_executable (fastdonkey main.cpp)
+add_executable (fastdonkey main.cpp pwm.c mailbox.c cpuinfo.c)
 add_executable (ncnn_test ncnn_test.cpp)
 
 

@@ -24,21 +24,27 @@
 
 extern "C" {
 #include "c_gpio.h"
+#include "pwm.h"
 }
 
 #define TIMING 1
-#define WHOLE_IMG_WIDTH 1280
-#define WHOLE_IMG_HEIGHT 720
+#define WHOLE_IMG_WIDTH 640
+#define WHOLE_IMG_HEIGHT 480
 
 using namespace cv;
 
 int main(int argc, char** argv){
 
+  set_loglevel(999);
+  int heading_gpio = 18, pitch_gpio = 12, mode_gpio = 13, laser_gpio = 23,
+      laser_switch = 0;
+
+
 	raspicam::RaspiCam_Cv Camera;
 //	Camera.set( CV_CAP_PROP_FORMAT, CV_8UC3 );
 	Camera.set(CV_CAP_PROP_FRAME_WIDTH, WHOLE_IMG_WIDTH);    //  1280x720
 	Camera.set(CV_CAP_PROP_FRAME_HEIGHT, WHOLE_IMG_HEIGHT);
-	Camera.set(CV_CAP_PROP_FPS, 30);
+	Camera.set(CV_CAP_PROP_FPS, 120);
 	if (!Camera.open()) {
 		std::cerr << "Error opening the camera" << std::endl;
 		return -1;
