@@ -36,9 +36,19 @@ using namespace cv;
 int main(int argc, char** argv){
 
   set_loglevel(999);
-  int heading_gpio = 18, pitch_gpio = 12, mode_gpio = 13, laser_gpio = 23,
-      laser_switch = 0;
+  int throttle_pwm = 18, steering_pwm = 12;//pin32, pin12
+  int pw_incr_us = 2;
+  pwm_setup(pw_incr_us, DELAY_VIA_PWM);
 
+// Setup demo parameters
+  int channel = 0;
+  int subcycle_time_us = SUBCYCLE_TIME_US_DEFAULT; //20ms;
+
+// Setup channel
+  init_channel(channel, subcycle_time_us);
+  print_channel(channel);
+  add_channel_pulse(channel, throttle_pwm, 0, 500 / pw_incr_us);
+  add_channel_pulse(channel, steering_pwm, 0, 2000 / pw_incr_us);
 
 	raspicam::RaspiCam_Cv Camera;
 //	Camera.set( CV_CAP_PROP_FORMAT, CV_8UC3 );
