@@ -27,7 +27,7 @@ int main(int argc, char** argv)
 
   ncnn::Mat angle_out, throttle_out;
   ncnn::Mat in;
-  ncnn::Extractor ex = net.create_extractor();
+
 
   std::chrono::steady_clock::time_point t1, t_frame;
 
@@ -36,7 +36,7 @@ int main(int argc, char** argv)
 	  test_img = cv::imread("/home/pi/codes/FastDonkey/1030_cam-image_array_.jpg");
 	  in = ncnn::Mat::from_pixels(test_img.data, ncnn::Mat::PIXEL_BGR, test_img.cols, test_img.rows);
 
-
+	  ncnn::Extractor ex = net.create_extractor();
 	  ex.set_light_mode(true);
 	  ex.input("data", in);
 	  ex.extract("angle_out", angle_out);

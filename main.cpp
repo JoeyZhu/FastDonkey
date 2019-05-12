@@ -6,6 +6,8 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <termios.h>
 #include <iostream>
 #include <fstream>
 #include "opencv2/calib3d/calib3d.hpp"
@@ -21,6 +23,9 @@
 #include <thread>
 #include <queue>          // std::queue
 #include <unistd.h>
+#include "platform.h"
+#include "net.h"
+#include "mat.h"
 
 extern "C" {
 #include "c_gpio.h"
@@ -28,31 +33,47 @@ extern "C" {
 }
 
 #define TIMING 1
-#define WHOLE_IMG_WIDTH 640
-#define WHOLE_IMG_HEIGHT 480
+#define WHOLE_IMG_WIDTH 160
+#define WHOLE_IMG_HEIGHT 120
 
 using namespace cv;
 
+
 int main(int argc, char** argv){
 
+  // get esc key init
+  struct termios initial_settings,
+                 new_settings;
+  int n;
+  unsigned char key;
+  tcgetattr(0,&initial_settings);
+
+  new_settings = initial_settings;
+  new_settings.c_lflag &= ~ICANON;
+  new_settings.c_lflag &= ~ECHO;
+  new_settings.c_lflag &= ~ISIG;
+  new_settings.c_cc[VMIN] = 0;
+  new_settings.c_cc[VTIME] = 0;
+
+  tcsetattr(0, TCSANOW, &new_settings);
+
+  // PWM init
   set_loglevel(999);
-  int throttle_pwm = 18, steering_pwm = 12;//pin32, pin12
+  int throttle_pwm_pin = 18, steering_pwm_pin = 12;//pin32, pin12
   int pw_incr_us = 2;
   pwm_setup(pw_incr_us, DELAY_VIA_PWM);
-
-// Setup demo parameters
   int channel = 0;
   int subcycle_time_us = SUBCYCLE_TIME_US_DEFAULT; //20ms;
-
-// Setup channel
   init_channel(channel, subcycle_time_us);
   print_channel(channel);
-  add_channel_pulse(channel, throttle_pwm, 0, 500 / pw_incr_us);
-  add_channel_pulse(channel, steering_pwm, 0, 2000 / pw_incr_us);
+  add_channel_pulse(channel, throttle_pwm_pin, 0, 1500 / pw_incr_us);
+  add_channel_pulse(channel, steering_pwm_pin, 0, 1500 / pw_incr_us);
 
+
+  // Camera init
 	raspicam::RaspiCam_Cv Camera;
 //	Camera.set( CV_CAP_PROP_FORMAT, CV_8UC3 );
-	Camera.set(CV_CAP_PROP_FRAME_WIDTH, WHOLE_IMG_WIDTH);    //  1280x720
+	Camera.set(CV_CAP_PROP_FRAME_WIDTH, WHOLE_IMG_WIDTH);
 	Camera.set(CV_CAP_PROP_FRAME_HEIGHT, WHOLE_IMG_HEIGHT);
 	Camera.set(CV_CAP_PROP_FPS, 120);
 	if (!Camera.open()) {
@@ -60,15 +81,28 @@ int main(int argc, char** argv){
 		return -1;
 	}
 	Camera.grab();
-	Mat frame;
+	cv::Mat frame;
 	std::chrono::steady_clock::time_point t1, t_frame;
-/*
-ncnn::Net net;
-net.load_param("alexnet.param");
-net.load_model("alexnet.bin");
-net.clear();
-*/
+
+	// NCNN init
+  ncnn::Net net;
+  net.load_param("/home/pi/mycar/models/ncnn_mypilot.param");
+  net.load_model("/home/pi/mycar/models/ncnn_mypilot.bin");
+  cv::Mat test_img;
+  int w;// image width
+  int h;// image height
+  ncnn::Mat angle_out_m, throttle_out_m;
+  ncnn::Mat in;
+
+
+  int count = 0;
 	while (Camera.isOpened()) {
+
+	  int input;
+	  input = getchar();
+	  if(input == 27){
+	    break;
+	  }
 
 #if TIMING == 1
 		std::chrono::duration<double> time_span1 = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - t_frame);
@@ -77,12 +111,57 @@ net.clear();
 		t1 = std::chrono::steady_clock::now();
 #endif
 
-
 		Camera.retrieve(frame);
-		Camera.grab();
+#if TIMING == 1
+    std::chrono::duration<double> time_span3 = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - t1);
+    std::cout << "camera retrieve Time: " << time_span3.count() * 1000 << "ms" << std::endl;
+    t1 = std::chrono::steady_clock::now();
+#endif
+    Camera.grab();
+#if TIMING == 1
+    std::chrono::duration<double> time_span4 = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - t1);
+    std::cout << "grab Time: " << time_span4.count() * 1000 << "ms" << std::endl;
+#endif
+//		printf("frame width: %d\n", frame.cols);
+		count++;
+//		if(count % 2 == 0){
+//		  test_img = cv::imread("/home/pi/codes/FastDonkey/1030_cam-image_array_.jpg");
+//		  printf("1\n");
+//		}else{
+//		  test_img = cv::imread("/home/pi/codes/FastDonkey/0_cam-image_array_.jpg");
+//		  printf("2\n");
+//		}
+		test_img = frame;
+#if TIMING == 1
+    t1 = std::chrono::steady_clock::now();
+#endif
+    //cv::resize(frame, test_img, cv::Size(160, 120));
+    in = ncnn::Mat::from_pixels(test_img.data, ncnn::Mat::PIXEL_BGR, test_img.cols, test_img.rows);
+    ncnn::Extractor ex = net.create_extractor();
+//    ex.set_num_threads(1);
+    ex.set_light_mode(true);
+    ex.input("data", in);
+    ex.extract("angle_out", angle_out_m);
+    ex.extract("throttle_out", throttle_out_m);
+#if TIMING == 1
+    std::chrono::duration<double> time_span2 = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - t1);
+    std::cout << "net Time: " << time_span2.count() * 1000 << "ms" << std::endl;
+#endif
+    assert(angle_out_m.w == 1);
+    printf("angle_out: %f\n", angle_out_m[0]);
+    assert(throttle_out_m.w == 1);
+    printf("throttle_out: %f\n", throttle_out_m[0]);
+
+    int angle_int, throttle_int;
+    angle_int = 500*angle_out_m[0] + 1500;
+    printf("angle_int: %d\n", angle_int);
+    add_channel_pulse(channel, throttle_pwm_pin, 0, angle_int / pw_incr_us);
+    add_channel_pulse(channel, steering_pwm_pin, 0, 1600 / pw_incr_us);
 	
 	}
-
+	tcsetattr(0, TCSANOW, &initial_settings);
+	add_channel_pulse(channel, throttle_pwm_pin, 0, 1500 / pw_incr_us);
+	add_channel_pulse(channel, steering_pwm_pin, 0, 1500 / pw_incr_us);
 	std::cout << "Stop camera..." << std::endl;
 	Camera.release();
 

@@ -25,6 +25,6 @@ add_executable (fastdonkey main.cpp pwm.c mailbox.c cpuinfo.c)
 add_executable (ncnn_test ncnn_test.cpp)
 
 
-target_link_libraries (fastdonkey ${OpenCV_LIBS} ${Boost_LIBRARIES} ${raspicam_CV_LIBS} ${CMAKE_THREAD_LIBS_INIT} )
+target_link_libraries (fastdonkey ncnn ${OpenCV_LIBS} ${Boost_LIBRARIES} ${raspicam_CV_LIBS} ${CMAKE_THREAD_LIBS_INIT} )
 
 target_link_libraries(ncnn_test ncnn ${OpenCV_LIBS} )
