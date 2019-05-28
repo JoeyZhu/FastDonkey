@@ -16,30 +16,32 @@ FastDonkey is a c/c++ framework for DonkeyCar to autonumously drive.
 * [caffe](http://caffe.berkeleyvision.org/). Caffe is a deep learning framework. Install it on PC.
 
 ## How to use
-1. Prepare model.
-1.1 Get keras model from python version Donkeycar.
-1.2 Transform to caffe model with Keras2caffe in PC. Remember to change your model path in keras_2_caffe.py. This script is from this repo.
+#### Prepare model.
+1. Get keras model from python version Donkeycar.
+2. Transform to caffe model with Keras2caffe in PC. Remember to change your model path in keras_2_caffe.py. This script is from this repo.
 ```
 python keras_2_caffe.py
 ```
-1.3 Upgrade caffe model in PC for ncnn. Upgrade tools are from caffe.
+3. Upgrade caffe model in PC for ncnn. Upgrade tools are from caffe.
 ```
 ./upgrade_net_proto_binary.bin caffe_mypilot.caffemodel new_caffe_mypilot.caffemodel
 ./upgrade_net_proto_text.bin caffe_mypilot.prototxt new_caffe_mypilot.prototxt
 ```
-1.4 Transorm updated caffe model to ncnn model in Pi. caffe2ncnn is from ncnn.
+4. Transorm updated caffe model to ncnn model in Pi. caffe2ncnn is from ncnn.
 ```    
 ./caffe2ncnn new_caffe_mypilot.prototxt new_caffe_mypilot.caffemodel ncnn_mypilot.param ncnn_mypilot.bin
 ```
-2. Wiring
-2.1 Just connect any pwm pins to throttle and steering servo. My connection is as follows:
+#### Wiring
+
+1. Just connect any pwm pins to throttle and steering servo. My connection is as follows:
 ```
 throttle， 18(RGPIO number）,12(pin number)，G1(gpio number)
 steering， 12(RGPIO number）,32(pin number)，G26(gpio number)
 ```
 
-3. Compile and RUN
-3.1 clone this repo and :
+#### Compile and RUN
+
+1. clone this repo and :
 ```
 mkdir build
 cd build
